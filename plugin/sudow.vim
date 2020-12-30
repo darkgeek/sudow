@@ -9,7 +9,7 @@ if !exists('g:sudoCommand')
 end
 
 let g:sudowNamedPipeFilePath = sudow#generateNamedPipeFilePath()
-command Sudow w :call sudow#dispatch()
+command Sudow call sudow#dispatch()
 
 function! sudow#dispatch() 
     sudow#createNamedPipe()
