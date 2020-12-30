@@ -9,11 +9,18 @@ if !exists('g:sudoCommand')
 end
 
 let g:sudowNamedPipeFilePath = sudow#generateNamedPipeFilePath()
+command Sudow w :call sudow#dispatch()
 
 function! sudow#dispatch() 
     sudow#createNamedPipe()
 
     let jobId = jobstart("tee " . g:sudowNamedPipeFilePath)
+    if jobId == 0
+        echoerr 'invalid arguments (or job table is full)'
+    elseif jobId == -1
+        echoerr 'invalid shell command'
+    endif
+
     let content = sudow#getBufferContent()
     call chansend(jobId, content)
     call chanclose(jobId, 'stdin')
@@ -46,13 +53,13 @@ endfunction
 
 function! sudow#createNamedPipe()
     if g:sudowNamedPipeFilePath == ""
-        echo 'illegal named pipe file path'
+        echoerr 'illegal named pipe file path'
         return
     endif
 
     let createRes = system('mkfifo ' . g:sudowNamedPipeFilePath)
 
     if !isfname(g:sudowNamedPipeFilePath)
-        echo 'Create Named pipe failed: ' . createRes
+        echoerr 'Create Named pipe failed: ' . createRes
     endif
 endfunction
