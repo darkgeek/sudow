@@ -15,13 +15,13 @@ endfunction
 function! sudow#generateNamedPipeFilePath() 
     let baseDir = ""
     if exists("$TMPDIR")
-        let baseDir = "$TMPDIR"
+        let baseDir = expand("$TMPDIR")
     elseif isdirectory('/tmp')
         let baseDir = '/tmp'
-    elseif isdirectory('$HOME/.cache')
-        let baseDir = '$HOME/.cache'
-    elseif isdirectory('$HOME')
-        let baseDir = '$HOME'
+    elseif isdirectory(expand('$HOME/.cache'))
+        let baseDir = expand('$HOME/.cache')
+    elseif isdirectory(expand('$HOME'))
+        let baseDir = expand('$HOME')
     else
         return ""
     endif
@@ -68,7 +68,7 @@ function! sudow#dispatch()
         call chanclose(jobId, 'stdin')
 
         " tty is required for sudo or doas, so :terminal is needed
-        call execute(':terminal ' . g:sudoCommand . ' tee % > /dev/null < ' . g:sudowNamedPipeFilePath . ' && ' . 'rm -f ' . g:sudowNamedPipeFilePath)
+        call execute(':terminal ' . g:sudoCommand . ' tee % > /dev/null < ' . g:sudowNamedPipeFilePath . ' ; ' . 'rm -f ' . g:sudowNamedPipeFilePath)
     catch
         echoerr 'sudow job failed for reason: ' .. v:exception
     endtry
