@@ -1,4 +1,4 @@
-" sudow is a plugin to write files by using 'sudo' or 'doas', with the help of 'tee'
+" sudow is a plugin to write files by using 'sudo' or 'doas', with the help of named pipe
 " Maintainer:	Justin Yang <linuxjustin@gmail.com>
 " Last Change:  2020-12-31
 " Version: 0.0.1
@@ -46,20 +46,23 @@ endfunction
 function! sudow#dispatch() 
     call sudow#createNamedPipe()
 
-    " TODO: should have try-catch-finally style exception control
-    let jobId = jobstart("tee " . g:sudowNamedPipeFilePath)
-    if jobId == 0
-        echoerr 'invalid arguments (or job table is full)'
-    elseif jobId == -1
-        echoerr 'invalid shell command'
-    endif
+    try
+        let jobId = jobstart("tee " . g:sudowNamedPipeFilePath)
+        if jobId == 0
+            echoerr 'invalid arguments (or job table is full)'
+        elseif jobId == -1
+            echoerr 'invalid shell command'
+        endif
 
-    let content = sudow#getBufferContent()
-    call chansend(jobId, content)
-    call chanclose(jobId, 'stdin')
+        let content = sudow#getBufferContent()
+        call chansend(jobId, content)
+        call chanclose(jobId, 'stdin')
 
-    " tty is required for sudo or doas, so :terminal is needed
-    call execute(':terminal ' . g:sudoCommand . ' tee % > /dev/null < ' . g:sudowNamedPipeFilePath . ' && ' . 'rm -f ' . g:sudowNamedPipeFilePath)
+        " tty is required for sudo or doas, so :terminal is needed
+        call execute(':terminal ' . g:sudoCommand . ' tee % > /dev/null < ' . g:sudowNamedPipeFilePath . ' && ' . 'rm -f ' . g:sudowNamedPipeFilePath)
+    catch
+        echoerr 'sudow job failed for reason: ' .. v:exception
+    endtry
 endfunction
 
 let g:sudowNamedPipeFilePath = sudow#generateNamedPipeFilePath()
