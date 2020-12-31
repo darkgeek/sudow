@@ -8,27 +8,6 @@ if !exists('g:sudoCommand')
     let g:sudoCommand = 'sudo'
 end
 
-let g:sudowNamedPipeFilePath = sudow#generateNamedPipeFilePath()
-command Sudow call sudow#dispatch()
-
-function! sudow#dispatch() 
-    sudow#createNamedPipe()
-
-    let jobId = jobstart("tee " . g:sudowNamedPipeFilePath)
-    if jobId == 0
-        echoerr 'invalid arguments (or job table is full)'
-    elseif jobId == -1
-        echoerr 'invalid shell command'
-    endif
-
-    let content = sudow#getBufferContent()
-    call chansend(jobId, content)
-    call chanclose(jobId, 'stdin')
-
-    " tty is required for sudo or doas, so :terminal is needed
-    call execute(':terminal ' . g:sudoCommand . ' tee % > /dev/null < ' . g:sudowNamedPipeFilePath)
-endfunction
-
 function! sudow#getBufferContent()
     return join(getline(1, "$"), "\n")
 endfunction
@@ -36,13 +15,13 @@ endfunction
 function! sudow#generateNamedPipeFilePath() 
     let baseDir = ""
     if exists("$TMPDIR")
-        baseDir = expand('$TMPDIR')
+        let baseDir = "$TMPDIR"
     elseif isdirectory('/tmp')
-        baseDir = expand('/tmp')
-    elseif isdirectory(expand('$HOME/.cache'))
-        baseDir = expand('$HOME/.cache')
-    elseif isdirectory(expand('$HOME'))
-        baseDir = expand('$HOME')
+        let baseDir = '/tmp'
+    elseif isdirectory('$HOME/.cache')
+        let baseDir = '$HOME/.cache'
+    elseif isdirectory('$HOME')
+        let baseDir = '$HOME'
     else
         return ""
     endif
@@ -59,7 +38,30 @@ function! sudow#createNamedPipe()
 
     let createRes = system('mkfifo ' . g:sudowNamedPipeFilePath)
 
-    if !isfname(g:sudowNamedPipeFilePath)
+    if !filereadable(g:sudowNamedPipeFilePath)
         echoerr 'Create Named pipe failed: ' . createRes
     endif
 endfunction
+
+function! sudow#dispatch() 
+    call sudow#createNamedPipe()
+
+    " TODO: should have try-catch-finally style exception control
+    let jobId = jobstart("tee " . g:sudowNamedPipeFilePath)
+    if jobId == 0
+        echoerr 'invalid arguments (or job table is full)'
+    elseif jobId == -1
+        echoerr 'invalid shell command'
+    endif
+
+    let content = sudow#getBufferContent()
+    call chansend(jobId, content)
+    call chanclose(jobId, 'stdin')
+
+    " tty is required for sudo or doas, so :terminal is needed
+    call execute(':terminal ' . g:sudoCommand . ' tee % > /dev/null < ' . g:sudowNamedPipeFilePath)
+    " TODO: should remove the named pipe file
+endfunction
+
+let g:sudowNamedPipeFilePath = sudow#generateNamedPipeFilePath()
+command Sudow call sudow#dispatch()
