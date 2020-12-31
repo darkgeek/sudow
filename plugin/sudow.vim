@@ -59,8 +59,7 @@ function! sudow#dispatch()
     call chanclose(jobId, 'stdin')
 
     " tty is required for sudo or doas, so :terminal is needed
-    call execute(':terminal ' . g:sudoCommand . ' tee % > /dev/null < ' . g:sudowNamedPipeFilePath)
-    " TODO: should remove the named pipe file
+    call execute(':terminal ' . g:sudoCommand . ' tee % > /dev/null < ' . g:sudowNamedPipeFilePath . ' && ' . 'rm -f ' . g:sudowNamedPipeFilePath)
 endfunction
 
 let g:sudowNamedPipeFilePath = sudow#generateNamedPipeFilePath()
