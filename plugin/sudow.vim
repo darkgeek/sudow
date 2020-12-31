@@ -27,6 +27,10 @@ function! sudow#generateNamedPipeFilePath()
     endif
 
     let fileName = 'sudow' . localtime()
+
+    if baseDir =~ '^.*/$'
+        return baseDir . fileName
+    endif
     return baseDir . '/' . fileName
 endfunction
 
@@ -36,15 +40,20 @@ function! sudow#createNamedPipe()
         return
     endif
 
-    let createRes = system('mkfifo ' . g:sudowNamedPipeFilePath)
+    call system('mkfifo ' . g:sudowNamedPipeFilePath)
 
     if !filereadable(g:sudowNamedPipeFilePath)
-        echoerr 'Create Named pipe failed: ' . createRes
+        throw 'pipe-create-error'
     endif
 endfunction
 
 function! sudow#dispatch() 
-    call sudow#createNamedPipe()
+    try
+        call sudow#createNamedPipe()
+    catch /pipe\-create\-error/
+        echoerr 'Create named pipe failed, so aborted'
+        return
+    endtry
 
     try
         let jobId = jobstart("tee " . g:sudowNamedPipeFilePath)
@@ -66,4 +75,4 @@ function! sudow#dispatch()
 endfunction
 
 let g:sudowNamedPipeFilePath = sudow#generateNamedPipeFilePath()
-command Sudow call sudow#dispatch()
+command! Sudow call sudow#dispatch()
