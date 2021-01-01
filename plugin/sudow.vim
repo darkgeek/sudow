@@ -26,7 +26,7 @@ function! sudow#generateNamedPipeFilePath()
         return ""
     endif
 
-    let fileName = 'sudow' . localtime()
+    let fileName = 'sudow-' . expand('$USER') . '-' . localtime()
 
     if baseDir =~ '^.*/$'
         return baseDir . fileName
@@ -40,7 +40,7 @@ function! sudow#createNamedPipe()
         return
     endif
 
-    call system('mkfifo ' . g:sudowNamedPipeFilePath)
+    call system('mkfifo -m 600 ' . g:sudowNamedPipeFilePath)
 
     if !filereadable(g:sudowNamedPipeFilePath)
         throw 'pipe-create-error'
